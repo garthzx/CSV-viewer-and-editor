@@ -11,6 +11,8 @@ import javax.swing.table.AbstractTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,7 +22,7 @@ import java.util.List;
 public class MainFrame extends JFrame
 {
     private TablePanel tablePanel;
-    private Controller controller;
+    private final Controller controller;
     private JFileChooser fileChooser;
 
     public MainFrame()
@@ -39,6 +41,7 @@ public class MainFrame extends JFrame
 
         setSize(700, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
         setVisible(true);
     }
 
@@ -90,6 +93,11 @@ public class MainFrame extends JFrame
                 {
                     try
                     {
+                        if (JOptionPane.showConfirmDialog(MainFrame.this, "Confirm if the csv file contains long strings so the program may resize itself")
+                                            == JOptionPane.OK_OPTION)
+                        {
+                            tablePanel.setResize();
+                        }
                         controller.loadFromFile(fileChooser.getSelectedFile());
                         tablePanel.setData(controller.getDataList());
                         tablePanel.refresh();
@@ -103,6 +111,55 @@ public class MainFrame extends JFrame
                 }
             }
         });
+
+        exportDataItem.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                fileChooser.setDialogTitle("Save file");
+                int userSelection = fileChooser.showSaveDialog(MainFrame.this);
+
+                if (userSelection == JFileChooser.APPROVE_OPTION)
+                {
+                    try
+                    {
+                        String fileName = fileChooser.getSelectedFile().getName();
+                        String fileExtension = Utils.getFileExtensions(fileName);
+                        if (fileExtension == null)
+                        {
+                            JOptionPane.showMessageDialog(MainFrame.this, "The file should be a csv file.",
+                                    "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                        else
+                        {
+                            controller.saveFromFile(fileChooser.getSelectedFile());
+                        }
+                    } catch (IOException ex)
+                    {
+                        JOptionPane.showMessageDialog(MainFrame.this, "Could not save data to file.",
+                                "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        });
+
+        exitItem.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                int action = JOptionPane.showConfirmDialog(MainFrame.this, "Do you really want " +
+                        "to exit the application?", "Confirm Exit", JOptionPane.OK_CANCEL_OPTION);
+                if (action == JOptionPane.OK_OPTION)
+                {
+                    System.exit(0);
+                }
+            }
+        });
+
+        exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, InputEvent.CTRL_DOWN_MASK));
+
         fileMenu.add(importDataItem);
         fileMenu.add(exportDataItem);
         fileMenu.add(exitItem);
@@ -118,6 +175,9 @@ class TablePanel extends JPanel
     private JTable table;
     private TableModel tableModel;
 
+    private JScrollPane scrollPane1;
+    private JScrollPane scrollPane2;
+
     public TablePanel()
     {
         tableModel = new TableModel();
@@ -125,7 +185,21 @@ class TablePanel extends JPanel
         table = new JTable(tableModel);
 
         setLayout(new BorderLayout());
-        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        scrollPane1 = new JScrollPane(table);
+
+        add(scrollPane1, BorderLayout.CENTER);
+    }
+
+    public void setResize()
+    {
+        // remove first the table in the center
+        BorderLayout borderLayout = (BorderLayout) getLayout();
+        remove(borderLayout.getLayoutComponent(BorderLayout.CENTER));
+
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        add(new JScrollPane(table, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED),
+                BorderLayout.CENTER);
     }
 
     public void refresh()
@@ -168,7 +242,7 @@ class TableModel extends AbstractTableModel
             colNames.addAll(Arrays.asList(dataColumnNames));
 
             // remove first row
-            data.remove(0);
+//            data.remove(0);
         }
 
         fireTableStructureChanged();

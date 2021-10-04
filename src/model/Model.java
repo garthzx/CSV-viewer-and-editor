@@ -33,17 +33,18 @@ public class Model
         {
             dataList.add(new Data(substrings));
         }
+
+        reader.close();
     }
 
     public void saveFromFile(File file) throws IOException
     {
-//        try (BufferedWriter locFile = new BufferedWriter(new FileWriter(file)))
-//        {
-//            for (Data data : dataList)
-//            {
-//                locFile.write(data.getData());
-//            }
-//        }
-//        CSVWriter
+        CSVWriter writer = new CSVWriter(new FileWriter(file));
+        for (Data data : dataList)
+        {
+            writer.writeNext(data.getValue());
+        }
+
+        writer.close();
     }
 }
