@@ -6,24 +6,29 @@ import model.Data;
 import utils.Utils;
 
 import javax.swing.*;
+import javax.swing.event.CellEditorListener;
+import javax.swing.event.ChangeEvent;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableCellEditor;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
+import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/*
+    All the UI is done here. Because it's just a small program, I didn't bother separating it
+    to other classes to respect OOP paradigm. I also don't plan on enlarging this application.
+ */
 public class MainFrame extends JFrame
 {
     private TablePanel tablePanel;
     private final Controller controller;
     private JFileChooser fileChooser;
+    private File currFile;
 
     public MainFrame()
     {
@@ -80,9 +85,36 @@ public class MainFrame extends JFrame
         JMenuBar menuBar = new JMenuBar();
 
         JMenu fileMenu = new JMenu("File");
+        JMenuItem saveDataItem = new JMenuItem("Save");
         JMenuItem exportDataItem = new JMenuItem("Export Data...");
         JMenuItem importDataItem = new JMenuItem("Import Data...");
         JMenuItem exitItem = new JMenuItem("Exit");
+
+        JMenu debugMenu = new JMenu("Debug");
+        JMenuItem memoryUsageItem =  new JMenuItem("Print memory usage");
+
+        saveDataItem.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                if (currFile != null)
+                {
+                    try
+                    {
+                        controller.saveFromFile(currFile);
+                    } catch (IOException io)
+                    {
+                        io.printStackTrace();
+                    }
+                }
+                else
+                {
+                    JOptionPane.showMessageDialog(MainFrame.this, "No data to be saved",
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
 
         importDataItem.addActionListener(new ActionListener()
         {
@@ -98,6 +130,7 @@ public class MainFrame extends JFrame
                         {
                             tablePanel.setResize();
                         }
+                        currFile = fileChooser.getSelectedFile();
                         controller.loadFromFile(fileChooser.getSelectedFile());
                         tablePanel.setData(controller.getDataList());
                         tablePanel.refresh();
@@ -158,19 +191,33 @@ public class MainFrame extends JFrame
             }
         });
 
+        memoryUsageItem.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                System.out.println((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1048576.0);
+            }
+        });
+
         exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, InputEvent.CTRL_DOWN_MASK));
 
+        fileMenu.add(saveDataItem);
         fileMenu.add(importDataItem);
         fileMenu.add(exportDataItem);
         fileMenu.add(exitItem);
 
+        debugMenu.add(memoryUsageItem);
+
         menuBar.add(fileMenu);
+        menuBar.add(debugMenu);
 
         return menuBar;
     }
+
 }
 
-class TablePanel extends JPanel
+class TablePanel extends JPanel implements KeyListener
 {
     private JTable table;
     private TableModel tableModel;
@@ -180,6 +227,9 @@ class TablePanel extends JPanel
 
     public TablePanel()
     {
+        setFocusable(true);
+        addKeyListener(this);
+
         tableModel = new TableModel();
 
         table = new JTable(tableModel);
@@ -200,6 +250,10 @@ class TablePanel extends JPanel
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         add(new JScrollPane(table, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED),
                 BorderLayout.CENTER);
+
+        // when removing or adding components from the panel, these two methods should be called.
+        revalidate();
+        repaint();
     }
 
     public void refresh()
@@ -211,6 +265,33 @@ class TablePanel extends JPanel
     public void setData(List<Data> dataList)
     {
         tableModel.setData(dataList);
+    }
+
+
+    @Override
+    public void keyTyped(KeyEvent e)
+    {
+        System.out.println(e.getKeyChar());
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e)
+    {
+        if (e.getKeyCode() == KeyEvent.VK_C)
+        {
+            System.out.println((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1048576.0);
+        }
+
+        if (e.getKeyCode() == KeyEvent.VK_ENTER)
+        {
+
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e)
+    {
+
     }
 }
 
@@ -246,7 +327,7 @@ class TableModel extends AbstractTableModel
         }
 
         fireTableStructureChanged();
-        fireTableDataChanged();;
+//        fireTableDataChanged();
     }
 
     @Override
